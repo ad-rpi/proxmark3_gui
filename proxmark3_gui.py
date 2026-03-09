@@ -116,9 +116,10 @@ def _refresh_all_ui():
 
     status_text = f'STATUS: {st}'
 
+    html_content = '<pre style="margin:0">' + _escape_html(text) + '</pre>'
     for t in list(_ui_terminals):
         try:
-            t.set_value(text)
+            t.set_content(html_content)
         except Exception:
             try: _ui_terminals.remove(t)
             except ValueError: pass
@@ -126,7 +127,7 @@ def _refresh_all_ui():
     if _ui_terminals:
         try:
             ui.run_javascript(
-                "document.querySelectorAll('.pm3-terminal textarea')"
+                "document.querySelectorAll('.pm3-terminal')"
                 ".forEach(el => { el.scrollTop = el.scrollHeight; })"
             )
         except Exception:
@@ -407,6 +408,10 @@ def add_shared_layout():
 # WIDGET HELPERS
 # ────────────────────────────────────────────────
 
+def _escape_html(s: str) -> str:
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
 def make_terminal(height: str = '280px'):
     with ui.card().classes('w-full bg-grey-10 border border-grey-800'):
         with ui.row().classes('items-center justify-between px-3 pt-2'):
@@ -415,15 +420,20 @@ def make_terminal(height: str = '280px'):
                 def _clear():
                     output.clear()
                     for t in list(_ui_terminals):
-                        try: t.set_value('')
+                        try: t.set_content('<pre style="margin:0"></pre>')
                         except Exception: pass
                 ui.button('Clear', on_click=_clear, color='grey').props('flat dense size=xs').classes('font-mono')
                 ui.button('help',  on_click=lambda: send('help'), color='blue').props('flat dense size=xs').classes('font-mono')
                 ui.button('auto',  on_click=lambda: send('auto'), color='orange').props('flat dense size=xs').classes('font-mono')
 
-        term = ui.textarea(value='\n'.join(output)).props('readonly outlined dark').classes(
-            'w-full font-mono text-xs pm3-terminal'
-        ).style(f'height:{height}; background:#0a0a0a; color:#f87171; font-family:"Courier New",monospace; resize:none;')
+        initial_html = '<pre style="margin:0">' + _escape_html('\n'.join(output)) + '</pre>'
+        term = ui.html(initial_html).classes('pm3-terminal w-full').style(
+            f'height:{height}; overflow-y:auto; overflow-x:auto;'
+            'background:#0a0a0a; color:#f87171;'
+            'font-family:"Courier New",monospace;'
+            'display:block; padding:8px; box-sizing:border-box;'
+            'font-size:0.75rem; line-height:1.4;'
+        )
         _ui_terminals.append(term)
 
         with ui.row().classes('px-2 pb-2 gap-2 items-center border-t border-grey-800'):
